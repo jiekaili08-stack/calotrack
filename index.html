@@ -880,8 +880,8 @@
       document.getElementById('tdeeDisplay').innerText = stats.tdee;
       document.getElementById('budgetRemaining').innerText = remainingBudget;
 
-      // Render Cumulative Mass & Fat Metrics
-      renderMassAndFatMetrics(totalFood, totalBurned);
+      // Render Cumulative Mass & Fat Metrics (Passing stats & timers)
+      renderMassAndFatMetrics(totalFood, totalBurned, stats.tdee, timers.totalDays);
 
       // Update Boss HP Bar Visuals
       const hpBarFill = document.getElementById('bossHpFill');
@@ -935,9 +935,15 @@
     }
 
     /* Render Cumulative Mass & Fat Metrics */
-    function renderMassAndFatMetrics(totalFood, totalBurned) {
-      // Net Burned/Gained Calories
-      const netBalance = totalFood - totalBurned; // Positive = Surplus, Negative = Deficit
+    function renderMassAndFatMetrics(totalFood, totalBurned, dailyTdee, totalDays) {
+      // Calculate Total Maintenance Calories Expended over the entire campaign duration
+      const campaignDays = Math.max(1, totalDays || 1);
+      const totalMaintenanceBurn = dailyTdee * campaignDays;
+
+      // True Net Calorie Balance = (Food In) - (Cardio Out + Base Metabolic TDEE Out)
+      const totalExpended = totalBurned + totalMaintenanceBurn;
+      const netBalance = totalFood - totalExpended; // Positive = Surplus, Negative = Deficit
+
       const netCalEl = document.getElementById('lifetimeNetCalDisplay');
       const fatMassEl = document.getElementById('lifetimeFatMassDisplay');
       const benchmarkEl = document.getElementById('lifetimeVisualBenchmark');
@@ -949,7 +955,7 @@
         fatMassEl.innerText = "0.00 kg / 0.0 lbs";
         fatMassEl.className = "text-lg md:text-xl font-bold my-2 text-gray-400";
         benchmarkEl.innerHTML = `<i class="fa-solid fa-scale-balanced text-bossBlue"></i> 0 mass shift`;
-        subtextEl.innerText = "Execute attacks or cardio to track mass conversions!";
+        subtextEl.innerText = `Exactly at maintenance over ${campaignDays} day(s) (${totalMaintenanceBurn.toLocaleString()} TDEE burned).`;
         return;
       }
 
@@ -960,10 +966,10 @@
       if (netBalance < 0) {
         // DEFICIT / BURNED
         const burnedKcal = Math.abs(netBalance);
-        netCalEl.innerText = `-${burnedKcal.toLocaleString()} kcal (Burned)`;
+        netCalEl.innerText = `-${burnedKcal.toLocaleString()} kcal Net Deficit`;
         netCalEl.className = "text-lg md:text-xl font-bold my-2 text-bossGreen";
 
-        fatMassEl.innerText = `-${fatKg} kg / -${fatLbs} lbs Fat`;
+        fatMassEl.innerText = `-${fatKg} kg / -${fatLbs} lbs Fat Loss`;
         fatMassEl.className = "text-lg md:text-xl font-bold my-2 text-bossGreen";
 
         // Relatable Benchmarks for Fat Loss
@@ -975,19 +981,19 @@
         } else {
           benchmarkEl.innerHTML = `<i class="fa-solid fa-cubes text-bossYellow"></i> ~${butterPacks} Packs of Butter (250g) Vaporized!`;
         }
-        subtextEl.innerText = "Pure fat mass equivalent burned through deficit actions.";
+        subtextEl.innerText = `Total food (+${totalFood.toLocaleString()}) vs Total expenditure (-${totalExpended.toLocaleString()} kcal across ${campaignDays} days).`;
       } else {
         // SURPLUS / GAINED
-        netCalEl.innerText = `+${netBalance.toLocaleString()} kcal (Gained)`;
+        netCalEl.innerText = `+${netBalance.toLocaleString()} kcal Net Surplus`;
         netCalEl.className = "text-lg md:text-xl font-bold my-2 text-bossBlue";
 
-        fatMassEl.innerText = `+${fatKg} kg / +${fatLbs} lbs Mass`;
+        fatMassEl.innerText = `+${fatKg} kg / +${fatLbs} lbs Mass Gain`;
         fatMassEl.className = "text-lg md:text-xl font-bold my-2 text-bossBlue";
 
         // Relatable Benchmarks for Surplus / Muscle / Mass
         const steakServings = (fatKg / 0.3).toFixed(1); // 300g steaks
         benchmarkEl.innerHTML = `<i class="fa-solid fa-drumstick-bite text-bossYellow"></i> ~${steakServings} Ribeye Steaks of Mass Fuel`;
-        subtextEl.innerText = "Calorie surplus allocated toward muscle hypertrophy and recovery.";
+        subtextEl.innerText = `Total food (+${totalFood.toLocaleString()}) exceeded total expenditure (-${totalExpended.toLocaleString()} kcal across ${campaignDays} days).`;
       }
     }
 
